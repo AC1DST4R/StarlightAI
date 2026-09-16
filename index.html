@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starlight AI — Gemini Client</title>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+
+<style>
+:root {
+    --bg: #08090c;
+    --bg2: #0c0e13;
+    --panel: rgba(18, 20, 27, .82);
+    --panel-solid: #12141b;
+    --panel-hover: #181b24;
+    --border: rgba(255,255,255,.08);
+    --border-hover: rgba(255,255,255,.15);
+    --text: #f5f7fa;
+    --muted: #8b919d;
+    --accent: #8b5cf6;
+    --accent2: #6366f1;
+    --danger: #ef4444;
+    --user: #171923;
+    --shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 50% -20%, rgba(99,102,241,.18), transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(139,92,246,.08), transparent 30%),
+        var(--bg);
+}
+
+button,
+textarea,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    color: inherit;
+}
+
+.app {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+    width: 270px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: rgba(10,11,15,.8);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 7px 18px;
+}
+
+.brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #8b5cf6, #4f46e5);
+    box-shadow: 0 8px 30px rgba(99,102,241,.3);
+    font-size: 18px;
+}
+
+.brand-name {
+    font-weight: 700;
+    letter-spacing: -.3px;
+}
+
+.brand-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.new-chat {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.035);
+    border-radius: 12px;
+    padding: 11px 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    transition: .18s;
+}
+
+.new-chat:hover {
+    background: var(--panel-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+}
+
+.sidebar-title {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin: 24px 8px 9px;
+}
+
+.history {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px;
+    margin-bottom: 4px;
+    border-radius: 9px;
+    cursor: pointer;
+    color: #b9bec8;
+    font-size: 13px;
+    transition: .15s;
+}
+
+.history-item:hover,
+.history-item.active {
+    background: rgba(255,255,255,.055);
+    color: white;
+}
+
+.history-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-bottom {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.sidebar-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 10px;
+    border-radius: 9px;
+    color: var(--muted);
+    cursor: pointer;
+    text-align: left;
+}
+
+.sidebar-button:hover {
+    background: rgba(255,255,255,.05);
+    color: white;
+}
+
+/* MAIN */
+
+.main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,9,12,.55);
+    backdrop-filter: blur(18px);
+}
+
+.model-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.model-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 12px #22c55e;
+}
+
+.model-select {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: white;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+}
+
+.model-select option {
+    background: #11131a;
+}
+
+.top-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.icon-button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--muted);
+}
+
+.icon-button:hover {
+    color: white;
+    background: rgba(255,255,255,.06);
+    border-color: var(--border);
+}
+
+/* CHAT */
+
+.chat {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+.chat-inner {
+    width: min(920px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 45px 0 180px;
+}
+
+.welcome {
+    min-height: 55vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.welcome-logo {
+    width: 74px;
+    height: 74px;
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    font-size: 32px;
+    margin-bottom: 22px;
+    background:
+        linear-gradient(135deg, rgba(139,92,246,.95), rgba(79,70,229,.95));
+    box-shadow:
+        0 20px 60px rgba(99,102,241,.28),
+        inset 0 1px rgba(255,255,255,.25);
+}
+
+.welcome h1 {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 48px);
+    letter-spacing: -1.8px;
+}
+
+.gradient {
+    background: linear-gradient(90deg, #fff, #a78bfa, #818cf8);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.welcome p {
+    color: var(--muted);
+    margin: 12px 0 30px;
+    max-width: 550px;
+}
+
+.suggestions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: min(650px, 100%);
+}
+
+.suggestion {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.025);
+    border-radius: 13px;
+    padding: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: .18s;
+}
+
+.suggestion:hover {
+    background: rgba(255,255,255,.06);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+}
+
+.suggestion strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.suggestion small {
+    color: var(--muted);
+}
+
+/* MESSAGES */
+
+.message {
+    display: flex;
+    gap: 15px;
+    margin: 28px 0;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.message.user .avatar {
+    background: #292c36;
+}
+
+.message.ai .avatar {
+    background: linear-gradient(135deg, #8b5cf6, #4f46e5);
+}
+
+.message-body {
+    min-width: 0;
+    max-width: 780px;
+    line-height: 1.7;
+    font-size: 15px;
+}
+
+.message.user .message-body {
+    background: var(--user);
+    border: 1px solid var(--border);
+    padding: 13px 16px;
+    border-radius: 4px 15px 15px 15px;
+}
+
+.message.ai .message-body {
+    padding-top: 2px;
+}
+
+.message-body p:first-child {
+    margin-top: 0;
+}
+
+.message-body p:last-child {
+    margin-bottom: 0;
+}
+
+.message-body h1,
+.message-body h2,
+.message-body h3 {
+    line-height: 1.3;
+}
+
+.message-body code {
+    background: rgba(255,255,255,.07);
+    border: 1px solid var(--border);
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: .9em;
+}
+
+.code-wrap {
+    margin: 15px 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #090a0d;
+}
+
+.code-head {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 0 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.copy-code {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.copy-code:hover {
+    color: white;
+}
+
+pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    line-height: 1.5;
+}
+
+pre code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+.message-tools {
+    display: flex;
+    gap: 4px;
+    margin-top: 7px;
+}
+
+.message-tools button {
+    border: 0;
+    background: transparent;
+    color: #6f7580;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 7px;
+    border-radius: 6px;
+}
+
+.message-tools button:hover {
+    background: rgba(255,255,255,.05);
+    color: white;
+}
+
+/* COMPOSER */
+
+.composer-area {
+    position: fixed;
+    left: 270px;
+    right: 0;
+    bottom: 0;
+    padding: 20px 20px 22px;
+    pointer-events: none;
+    background: linear-gradient(transparent, rgba(8,9,12,.92) 30%);
+}
+
+.composer {
+    width: min(900px, 100%);
+    margin: 0 auto;
+    pointer-events: auto;
+    border: 1px solid var(--border-hover);
+    background: rgba(18,20,27,.88);
+    backdrop-filter: blur(25px);
+    border-radius: 19px;
+    box-shadow: var(--shadow);
+    padding: 10px;
+}
+
+.input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+textarea {
+    flex: 1;
+    resize: none;
+    max-height: 190px;
+    min-height: 46px;
+    padding: 12px 10px;
+    background: transparent;
+    color: white;
+    border: 0;
+    outline: none;
+    line-height: 1.5;
+}
+
+textarea::placeholder {
+    color: #666c77;
+}
+
+.send {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    background: white;
+    color: #090a0d;
+    font-weight: 800;
+    transition: .18s;
+}
+
+.send:hover {
+    transform: scale(1.04);
+}
+
+.send:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+.composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 7px 1px;
+    color: #666c77;
+    font-size: 10px;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+}
+
+/* MODAL */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(8px);
+    z-index: 50;
+}
+
+.overlay.open {
+    display: grid;
+}
+
+.modal {
+    width: min(500px, calc(100% - 30px));
+    background: #111319;
+    border: 1px solid var(--border-hover);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+}
+
+.modal h2 {
+    margin: 0 0 6px;
+}
+
+.modal p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.modal input {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: #090a0e;
+    color: white;
+    border-radius: 10px;
+    padding: 12px;
+    outline: none;
+    margin: 12px 0;
+}
+
+.modal input:focus {
+    border-color: #6366f1;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.modal-button {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.05);
+    color: white;
+    border-radius: 9px;
+    padding: 9px 14px;
+    cursor: pointer;
+}
+
+.modal-button.primary {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-color: transparent;
+}
+
+/* MOBILE */
+
+.mobile-menu {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        z-index: 30;
+        transition: .25s;
+        box-shadow: 20px 0 50px rgba(0,0,0,.5);
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .mobile-menu {
+        display: block;
+    }
+
+    .composer-area {
+        left: 0;
+    }
+
+    .chat-inner {
+        width: calc(100% - 24px);
+    }
+
+    .suggestions {
+        grid-template-columns: 1fr;
+    }
+
+    .topbar {
+        padding: 0 12px;
+    }
+
+    .model-area {
+        max-width: 60%;
+    }
+
+    .model-select {
+        max-width: 150px;
+        overflow: hidden;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">✦</div>
+            <div>
+                <div class="brand-name">Starlight AI</div>
+                <div class="brand-sub">Gemini client</div>
+            </div>
+        </div>
+
+        <button class="new-chat" onclick="newChat()">
+            <span>＋</span>
+            <span>New conversation</span>
+        </button>
+
+        <div class="sidebar-title">Conversations</div>
+
+        <div class="history" id="history"></div>
+
+        <div class="sidebar-bottom">
+            <button class="sidebar-button" onclick="openSettings()">
+                ⚙ Settings
+            </button>
+        </div>
+
+    </aside>
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div class="model-area">
+
+                <button class="icon-button mobile-menu" onclick="toggleSidebar()">
+                    ☰
+                </button>
+
+                <span class="model-dot"></span>
+
+                <select class="model-select" id="model">
+                    <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                    <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                </select>
+
+            </div>
+
+            <div class="top-actions">
+                <button class="icon-button" title="Clear chat" onclick="newChat()">⌫</button>
+                <button class="icon-button" title="Settings" onclick="openSettings()">⚙</button>
+            </div>
+
+        </header>
+
+        <section class="chat" id="chat">
+
+            <div class="chat-inner" id="chatInner">
+
+                <div class="welcome" id="welcome">
+
+                    <div class="welcome-logo">✦</div>
+
+                    <h1>
+                        Ask <span class="gradient">anything.</span>
+                    </h1>
+
+                    <p>
+                        A clean, fast Gemini interface designed around your conversations —
+                        without all the clutter.
+                    </p>
+
+                    <div class="suggestions">
+
+                        <button class="suggestion" onclick="useSuggestion('Explain quantum computing like I am 12')">
+                            <strong>Explain something</strong>
+                            <small>Quantum computing, simply</small>
+                        </button>
+
+                        <button class="suggestion" onclick="useSuggestion('Write a beautiful HTML landing page')">
+                            <strong>Build something</strong>
+                            <small>Create a modern website</small>
+                        </button>
+
+                        <button class="suggestion" onclick="useSuggestion('Help me plan a productive week')">
+                            <strong>Plan something</strong>
+                            <small>Turn ideas into a plan</small>
+                        </button>
+
+                        <button class="suggestion" onclick="useSuggestion('Give me 5 creative project ideas')">
+                            <strong>Brainstorm</strong>
+                            <small>Generate some ideas</small>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<div class="composer-area">
+
+    <div class="composer">
+
+        <div class="input-row">
+
+            <textarea
+                id="prompt"
+                rows="1"
+                placeholder="Message Gemini..."
+                autocomplete="off"
+            ></textarea>
+
+            <button class="send" id="sendButton" onclick="sendMessage()">
+                ↑
+            </button>
+
+        </div>
+
+        <div class="composer-footer">
+
+            <div class="status">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+            </div>
+
+            <span>Gemini API</span>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="overlay" id="settingsOverlay">
+
+    <div class="modal">
+
+        <h2>Settings</h2>
+
+        <p>
+            Enter your Gemini API key. It is stored only in this browser.
+        </p>
+
+        <input
+            id="apiKey"
+            type="password"
+            placeholder="AIza..."
+            autocomplete="off"
+        >
+
+        <p>
+            For public websites, use a backend proxy instead of exposing a
+            permanent API key in client-side JavaScript.
+        </p>
+
+        <div class="modal-actions">
+
+            <button class="modal-button" onclick="closeSettings()">
+                Cancel
+            </button>
+
+            <button class="modal-button primary" onclick="saveSettings()">
+                Save key
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+let apiKey = localStorage.getItem("gemini_api_key") || "";
+let messages = [];
+let isGenerating = false;
+
+const promptBox = document.getElementById("prompt");
+const chatInner = document.getElementById("chatInner");
+const chat = document.getElementById("chat");
+const sendButton = document.getElementById("sendButton");
+const statusText = document.getElementById("statusText");
+const welcome = document.getElementById("welcome");
+
+function escapeHTML(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMarkdown(text) {
+    const raw = marked.parse(text);
+
+    const clean = DOMPurify.sanitize(raw, {
+        ADD_ATTR: ["target"]
+    });
+
+    const temp = document.createElement("div");
+    temp.innerHTML = clean;
+
+    temp.querySelectorAll("pre").forEach(pre => {
+
+        const code = pre.querySelector("code");
+
+        if (!code) return;
+
+        const language =
+            [...code.classList]
+            .find(x => x.startsWith("language-"))
+            ?.replace("language-", "") || "code";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-wrap";
+
+        const header = document.createElement("div");
+        header.className = "code-head";
+
+        header.innerHTML = `
+            <span>${escapeHTML(language)}</span>
+            <button class="copy-code">Copy</button>
+        `;
+
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(header);
+        wrapper.appendChild(pre);
+
+        header.querySelector(".copy-code").onclick = async () => {
+            await navigator.clipboard.writeText(code.innerText);
+            header.querySelector(".copy-code").textContent = "Copied!";
+            setTimeout(() => {
+                header.querySelector(".copy-code").textContent = "Copy";
+            }, 1200);
+        };
+    });
+
+    return temp.innerHTML;
+}
+
+function addMessage(role, text) {
+
+    if (welcome) {
+        welcome.style.display = "none";
+    }
+
+    const message = document.createElement("div");
+    message.className = `message ${role}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = role === "user" ? "U" : "✦";
+
+    const body = document.createElement("div");
+    body.className = "message-body";
+
+    body.innerHTML =
+        role === "user"
+            ? escapeHTML(text).replace(/\n/g, "<br>")
+            : formatMarkdown(text);
+
+    message.appendChild(avatar);
+    message.appendChild(body);
+
+    if (role === "ai") {
+
+        const tools = document.createElement("div");
+        tools.className = "message-tools";
+
+        tools.innerHTML = `
+            <button onclick="copyMessage(this)">Copy</button>
+        `;
+
+        body.appendChild(tools);
+    }
+
+    chatInner.appendChild(message);
+
+    requestAnimationFrame(() => {
+        chat.scrollTop = chat.scrollHeight;
+    });
+
+    return body;
+}
+
+async function copyMessage(button) {
+
+    const body = button.closest(".message-body");
+
+    const clone = body.cloneNode(true);
+
+    clone.querySelector(".message-tools")?.remove();
+
+    await navigator.clipboard.writeText(clone.innerText);
+
+    button.textContent = "Copied!";
+
+    setTimeout(() => {
+        button.textContent = "Copy";
+    }, 1200);
+}
+
+async function sendMessage() {
+
+    const text = promptBox.value.trim();
+
+    if (!text || isGenerating) return;
+
+    if (!apiKey) {
+        openSettings();
+        return;
+    }
+
+    messages.push({
+        role: "user",
+        text
+    });
+
+    addMessage("user", text);
+
+    promptBox.value = "";
+    autoResize();
+
+    isGenerating = true;
+    sendButton.disabled = true;
+    statusText.textContent = "Thinking...";
+
+    const model = document.getElementById("model").value;
+
+    const contents = messages.map(message => ({
+        role: message.role === "ai" ? "model" : "user",
+        parts: [
+            {
+                text: message.text
+            }
+        ]
+    }));
+
+    try {
+
+        const response = await fetch(
+            `${API_BASE}${encodeURIComponent(model)}:generateContent`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": apiKey
+                },
+
+                body: JSON.stringify({
+                    contents
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data?.error?.message ||
+                `API request failed with status ${response.status}`
+            );
+        }
+
+        const answer =
+            data?.candidates?.[0]?.content?.parts
+            ?.map(part => part.text || "")
+            .join("") ||
+            "Gemini returned an empty response.";
+
+        messages.push({
+            role: "ai",
+            text: answer
+        });
+
+        addMessage("ai", answer);
+
+        statusText.textContent = "Ready";
+
+        saveConversation();
+
+    } catch (error) {
+
+        addMessage(
+            "ai",
+            `### Request failed\n\n\`${error.message}\``
+        );
+
+        statusText.textContent = "Error";
+
+    } finally {
+
+        isGenerating = false;
+        sendButton.disabled = false;
+    }
+}
+
+function useSuggestion(text) {
+    promptBox.value = text;
+    autoResize();
+    promptBox.focus();
+}
+
+function newChat() {
+
+    messages = [];
+
+    chatInner.innerHTML = "";
+
+    const newWelcome = document.createElement("div");
+
+    newWelcome.className = "welcome";
+
+    newWelcome.innerHTML = `
+        <div class="welcome-logo">✦</div>
+
+        <h1>
+            Ask <span class="gradient">anything.</span>
+        </h1>
+
+        <p>
+            A clean, fast Gemini interface designed around your conversations —
+            without all the clutter.
+        </p>
+
+        <div class="suggestions">
+
+            <button class="suggestion" onclick="useSuggestion('Explain quantum computing like I am 12')">
+                <strong>Explain something</strong>
+                <small>Quantum computing, simply</small>
+            </button>
+
+            <button class="suggestion" onclick="useSuggestion('Write a beautiful HTML landing page')">
+                <strong>Build something</strong>
+                <small>Create a modern website</small>
+            </button>
+
+            <button class="suggestion" onclick="useSuggestion('Help me plan a productive week')">
+                <strong>Plan something</strong>
+                <small>Turn ideas into a plan</small>
+            </button>
+
+            <button class="suggestion" onclick="useSuggestion('Give me 5 creative project ideas')">
+                <strong>Brainstorm</strong>
+                <small>Generate some ideas</small>
+            </button>
+
+        </div>
+    `;
+
+    chatInner.appendChild(newWelcome);
+
+    statusText.textContent = "Ready";
+}
+
+function openSettings() {
+
+    document.getElementById("apiKey").value = apiKey;
+
+    document
+        .getElementById("settingsOverlay")
+        .classList.add("open");
+}
+
+function closeSettings() {
+
+    document
+        .getElementById("settingsOverlay")
+        .classList.remove("open");
+}
+
+function saveSettings() {
+
+    apiKey =
+        document
+            .getElementById("apiKey")
+            .value
+            .trim();
+
+    if (apiKey) {
+        localStorage.setItem("gemini_api_key", apiKey);
+    } else {
+        localStorage.removeItem("gemini_api_key");
+    }
+
+    closeSettings();
+
+    statusText.textContent =
+        apiKey ? "API key loaded" : "API key required";
+}
+
+function toggleSidebar() {
+    document
+        .getElementById("sidebar")
+        .classList.toggle("open");
+}
+
+function autoResize() {
+
+    promptBox.style.height = "auto";
+
+    promptBox.style.height =
+        Math.min(promptBox.scrollHeight, 190) + "px";
+}
+
+promptBox.addEventListener("input", autoResize);
+
+promptBox.addEventListener("keydown", event => {
+
+    if (event.key === "Enter" && !event.shiftKey) {
+
+        event.preventDefault();
+
+        sendMessage();
+    }
+});
+
+function saveConversation() {
+
+    const history =
+        JSON.parse(localStorage.getItem("gemini_history") || "[]");
+
+    if (!messages.length) return;
+
+    const firstUser =
+        messages.find(x => x.role === "user");
+
+    if (!firstUser) return;
+
+    history.unshift({
+        title: firstUser.text.slice(0, 50),
+        date: Date.now()
+    });
+
+    localStorage.setItem(
+        "gemini_history",
+        JSON.stringify(history.slice(0, 20))
+    );
+
+    renderHistory();
+}
+
+function renderHistory() {
+
+    const historyContainer =
+        document.getElementById("history");
+
+    const history =
+        JSON.parse(localStorage.getItem("gemini_history") || "[]");
+
+    historyContainer.innerHTML = "";
+
+    history.forEach(item => {
+
+        const element =
+            document.createElement("div");
+
+        element.className = "history-item";
+
+        element.innerHTML = `
+            <span>◌</span>
+            <span>${escapeHTML(item.title)}</span>
+        `;
+
+        historyContainer.appendChild(element);
+    });
+}
+
+renderHistory();
+
+if (apiKey) {
+    statusText.textContent = "API key loaded";
+}
+</script>
+
+</body>
+</html>
